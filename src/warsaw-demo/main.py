@@ -4,7 +4,7 @@ import requests
 import networkx as nx
 
 from bokeh.plotting import figure, show, from_networkx
-from bokeh.models import Circle, ColumnDataSource, CustomJS
+from bokeh.models import Circle, ColumnDataSource, CustomJS, WheelZoomTool
 from bokeh.io import output_file
 
 from dotenv import load_dotenv
@@ -89,10 +89,8 @@ def create_graph(stops_data, routes_data):
 
 	return G
 
-def visualize_graph(G):
-	"""Visualizes the graph with bokeh."""
-
-	output_file("graph.html")  # Output to an HTML file
+def prepare_visualization_data(G):
+	"""Prepares data for visualization: transforms coords, creates ColumnDataSources."""
 
 	pos = nx.get_node_attributes(G, 'pos')
 	labels = nx.get_node_attributes(G, 'label')
@@ -134,13 +132,18 @@ def visualize_graph(G):
 	source_nodes = ColumnDataSource(node_data)
 	source_edges = ColumnDataSource(edge_data)
 
+	return source_nodes, source_edges, mercator_positions, min_x, max_x, min_y, max_y, initial_ratio
+
+
+def create_bokeh_plot(min_x, max_x, min_y, max_y):
+	"""Creates a Bokeh plot with specified settings."""
+
 	plot = figure(
 		title="ZTM Warsaw Public Transport Network",
-		x_axis_label="Longitude", y_axis_label="Latitude",
+		x_axis_label="Longitude",
+		y_axis_label="Latitude",
 		tools="pan,wheel_zoom,box_zoom,reset,save",
-		tooltips=[
-			("Stop name", "@label"),
-		],
+		tooltips=[("Stop name", "@label")],
 		sizing_mode="stretch_both",
 		x_axis_type="mercator",
 		y_axis_type="mercator",
@@ -148,30 +151,39 @@ def visualize_graph(G):
 		y_range=(min_y, max_y),
 	)
 
-	# Add tile layer
+	return plot
+
+def create_tile_map(plot):
+	"""Adds a tile map to the Bokeh plot."""
+
 	plot.add_tile(xyz.CartoDB.Positron)
+
+def create_graph_renderer(G, mercator_positions, source_nodes, source_edges):
+	"""Creates a graph renderer for Bokeh plot."""
 
 	graph_renderer = from_networkx(G, mercator_positions, scale=1)
 	graph_renderer.node_renderer.data_source = source_nodes
-	graph_renderer.node_renderer.glyph = Circle(radius=10)
+	graph_renderer.node_renderer.glyph = Circle(radius=50)
 	graph_renderer.edge_renderer.data_source = source_edges
 
-	plot.renderers.append(graph_renderer)
+	return graph_renderer
 
-	# Callback to adjust x_range on zoom
+def create_zoom_callback(plot, initial_ratio):
+	"""Creates a zoom callback to maintain aspect ratio."""
+
 	callback = CustomJS(args=dict(plot=plot, initial_ratio=initial_ratio), code=
 		"""
-			const x_range = plot.x_range
-			const y_range = plot.y_range
-			const current_width = x_range.end - x_range.start
-			const current_height = y_range.end - y_range.start;
+		const x_range = plot.x_range
+		const y_range = plot.y_range
+		const current_width = x_range.end - x_range.start
+		const current_height = y_range.end - y_range.start;
 
-			const current_ratio = current_width / current_height
-			if (Math.abs(current_ratio - initial_ratio) > 0.0001) {
-				const new_width = current_height * initial_ratio;
-				const mid_x = x_range.start + (current_width / 2);
-				x_range.start = mid_x - (new_width / 2)
-				x_range.end = mid_x + (new_width / 2)
+		const current_ratio = current_width / current_height
+		if (Math.abs(current_ratio - initial_ratio) > 0.0001) {
+			const new_width = current_height * initial_ratio;
+			const mid_x = x_range.start + (current_width / 2);
+			x_range.start = mid_x - (new_width / 2)
+			x_range.end = mid_x + (new_width / 2)
 			}
 		"""
 	)
@@ -181,7 +193,41 @@ def visualize_graph(G):
 	plot.y_range.js_on_change('start', callback)
 	plot.y_range.js_on_change('end', callback)
 
-	show(plot) # show plot
+def enable_wheel_zoom(plot):
+	"""
+	Enables wheel zoom by default.
+
+	In reality it just switches the the tool, but the goal is met.
+	"""
+
+	plot.toolbar.active_scroll = plot.select_one(WheelZoomTool)
+
+def visualize_graph(G):
+	"""Visualizes the graph with bokeh."""
+
+	# Output to an HTML file
+	output_file("graph.html")
+
+	source_nodes, source_edges, mercator_positions, min_x, max_x, min_y, max_y, initial_ratio = prepare_visualization_data(G)
+
+	plot = create_bokeh_plot(min_x, max_x, min_y, max_y)
+
+	create_tile_map(plot)
+
+	graph_renderer = create_graph_renderer(
+		G,
+		mercator_positions,
+		source_nodes,
+		source_edges,
+	)
+
+	plot.renderers.append(graph_renderer)
+
+	create_zoom_callback(plot, initial_ratio)
+
+	enable_wheel_zoom(plot)
+
+	show(plot)
 
 
 # prints some stats about the data
