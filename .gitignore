@@ -7,6 +7,9 @@
 
 # warsaw-demo
 
+## .env file
+src/warsaw-demo/.env
+
 ## cached api results
 src/warsaw-demo/*_data.json
 

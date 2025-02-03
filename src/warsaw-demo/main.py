@@ -7,17 +7,29 @@ from bokeh.plotting import figure, show, from_networkx
 from bokeh.models import Circle, HoverTool, ColumnDataSource
 from bokeh.io import output_file
 
+from dotenv import load_dotenv
+
 from ZTMStop import ZTMStop
 
-API_KEY = 'YOUR-API-KEY-GOES-HERE'
+load_dotenv()  # Load variables from .env file
 
-def get_stop_data():
-	response = requests.get(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id=ab75c33d-3a26-4342-b36a-6e5fef0a3ac3&api_key={API_KEY}')
+def get_api_key():
+	"""Retrieves the API key from the .env file."""
+	api_key = os.environ.get('API_KEY')
+
+	if not api_key:
+		print("Error: The 'API_KEY' variable is not set in the .env file.")
+		exit()
+
+	return api_key
+
+def get_stop_data(api_key):
+	response = requests.get(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id=ab75c33d-3a26-4342-b36a-6e5fef0a3ac3&api_key={api_key}')
 
 	return response.json()
 
-def get_routes_data():
-	response = requests.get(f'https://api.um.warszawa.pl/api/action/public_transport_routes/?apikey={API_KEY}')
+def get_routes_data(api_key):
+	response = requests.get(f'https://api.um.warszawa.pl/api/action/public_transport_routes/?apikey={api_key}')
 
 	return response.json()
 
@@ -126,9 +138,11 @@ def data_statistics(data):
 	print(f'Number of records: {len(data["result"])}')
 
 if __name__ == '__main__':
+	api_key = get_api_key()
+
 	if not os.path.exists('stops_data.json') or not os.path.exists('routes_data.json'):
-		stops_data = get_stop_data()
-		routes_data = get_routes_data()
+		stops_data = get_stop_data(api_key)
+		routes_data = get_routes_data(api_key)
 
 		save_data_to_file(stops_data, 'stops_data.json')
 		save_data_to_file(routes_data, 'routes_data.json')

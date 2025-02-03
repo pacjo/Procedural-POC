@@ -46,6 +46,9 @@
                 pip
                 venvShellHook
 
+                # security
+                python-dotenv
+
                 # REPL
                 ipykernel
 
