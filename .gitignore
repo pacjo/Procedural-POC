@@ -1,0 +1,14 @@
+# generic trash
+.ropeproject
+.venv
+
+**/**/__pycache__
+
+
+# warsaw-demo
+
+## cached api results
+src/warsaw-demo/*_data.json
+
+## result page
+src/warsaw-demo/graph.html
