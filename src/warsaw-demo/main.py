@@ -1,50 +1,14 @@
-import os
-import json
-import requests
 import networkx as nx
 
 from bokeh.plotting import figure, show, from_networkx
 from bokeh.models import Circle, ColumnDataSource, CustomJS, WheelZoomTool
 from bokeh.io import output_file
 
-from dotenv import load_dotenv
-
 import pyproj
 import xyzservices.providers as xyz
 
-from ZTMStop import ZTMStop
-
-load_dotenv()  # Load variables from .env file
-
-def get_api_key():
-	"""Retrieves the API key from the .env file."""
-	api_key = os.environ.get('API_KEY')
-
-	if not api_key:
-		print("Error: The 'API_KEY' variable is not set in the .env file.")
-		exit()
-
-	return api_key
-
-def get_stop_data(api_key):
-	response = requests.get(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id=ab75c33d-3a26-4342-b36a-6e5fef0a3ac3&api_key={api_key}')
-
-	return response.json()
-
-def get_routes_data(api_key):
-	response = requests.get(f'https://api.um.warszawa.pl/api/action/public_transport_routes/?apikey={api_key}')
-
-	return response.json()
-
-
-def save_data_to_file(data, filename: str):
-	with open(filename, 'w') as file:
-		json.dump(data, file, indent=4)
-
-def load_data_from_file(filename: str):
-    with open(filename, 'r') as file:
-        return json.load(file)
-
+from ztm_data.api import get_api_key, get_stop_data, get_routes_data
+from ztm_data.stop import ZTMStop
 
 def create_stop_lookup(stops_data) -> dict[tuple[int, int], ZTMStop]:
     """Creates a dictionary to look up ZTMStop objects by their combined 'zespol' and 'slupek' IDs."""
@@ -229,23 +193,11 @@ def visualize_graph(G):
 
 	show(plot)
 
-
-# prints some stats about the data
-def data_statistics(data):
-	print(f'Number of records: {len(data["result"])}')
-
 if __name__ == '__main__':
 	api_key = get_api_key()
 
-	if not os.path.exists('stops_data.json') or not os.path.exists('routes_data.json'):
-		stops_data = get_stop_data(api_key)
-		routes_data = get_routes_data(api_key)
-
-		save_data_to_file(stops_data, 'stops_data.json')
-		save_data_to_file(routes_data, 'routes_data.json')
-	else:
-		stops_data = load_data_from_file('stops_data.json')
-		routes_data = load_data_from_file('routes_data.json')
+	stops_data = get_stop_data(api_key)
+	routes_data = get_routes_data(api_key)
 
 	# Create the graph
 	G = create_graph(stops_data, routes_data)
