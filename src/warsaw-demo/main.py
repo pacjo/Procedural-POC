@@ -4,7 +4,7 @@ import requests
 import networkx as nx
 
 from bokeh.plotting import figure, show, from_networkx
-from bokeh.models import Circle, HoverTool, ColumnDataSource
+from bokeh.models import Circle, ColumnDataSource, CustomJS
 from bokeh.io import output_file
 
 from dotenv import load_dotenv
@@ -95,6 +95,16 @@ def visualize_graph(G):
 	labels = nx.get_node_attributes(G, 'label')
 	edge_labels = nx.get_edge_attributes(G,'line')
 
+	# Calculate initial bounds
+	min_lon = min(coord[0] for coord in pos.values())
+	max_lon = max(coord[0] for coord in pos.values())
+	min_lat = min(coord[1] for coord in pos.values())
+	max_lat = max(coord[1] for coord in pos.values())
+
+	initial_width = max_lon - min_lon
+	initial_height = max_lat - min_lat
+	initial_ratio = initial_width / initial_height
+
 	# Create a ColumnDataSource for nodes
 	node_data = dict(
 		index=list(G.nodes),
@@ -114,14 +124,16 @@ def visualize_graph(G):
 	source_edges = ColumnDataSource(edge_data)
 
 	plot = figure(
-    	title="ZTM Warsaw Public Transport Network",
+		title="ZTM Warsaw Public Transport Network",
 		x_axis_label="Longitude", y_axis_label="Latitude",
 		tools="pan,wheel_zoom,box_zoom,reset,save",
 		tooltips=[
 			("Stop name", "@label"),
-        ],
-        sizing_mode="stretch_both"
-    )
+		],
+		sizing_mode="stretch_both",
+		x_range=(min_lon, max_lon),
+		y_range=(min_lat, max_lat),
+	)
 
 	graph_renderer = from_networkx(G, pos, scale=1)
 	graph_renderer.node_renderer.data_source = source_nodes
@@ -129,6 +141,29 @@ def visualize_graph(G):
 	graph_renderer.edge_renderer.data_source = source_edges
 
 	plot.renderers.append(graph_renderer)
+
+	# Callback to adjust x_range on zoom
+	callback = CustomJS(args=dict(plot=plot, initial_ratio=initial_ratio), code=
+		"""
+			const x_range = plot.x_range
+			const y_range = plot.y_range
+			const current_width = x_range.end - x_range.start
+			const current_height = y_range.end - y_range.start;
+
+			const current_ratio = current_width / current_height
+			if (Math.abs(current_ratio - initial_ratio) > 0.0001) {
+				const new_width = current_height * initial_ratio;
+				const mid_x = x_range.start + (current_width / 2);
+				x_range.start = mid_x - (new_width / 2)
+				x_range.end = mid_x + (new_width / 2)
+			}
+		"""
+	)
+
+	plot.x_range.js_on_change('start', callback)
+	plot.x_range.js_on_change('end', callback)
+	plot.y_range.js_on_change('start', callback)
+	plot.y_range.js_on_change('end', callback)
 
 	show(plot) # show plot
 
