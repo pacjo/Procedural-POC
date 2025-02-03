@@ -9,6 +9,9 @@ from bokeh.io import output_file
 
 from dotenv import load_dotenv
 
+import pyproj
+import xyzservices.providers as xyz
+
 from ZTMStop import ZTMStop
 
 load_dotenv()  # Load variables from .env file
@@ -95,21 +98,29 @@ def visualize_graph(G):
 	labels = nx.get_node_attributes(G, 'label')
 	edge_labels = nx.get_edge_attributes(G,'line')
 
-	# Calculate initial bounds
-	min_lon = min(coord[0] for coord in pos.values())
-	max_lon = max(coord[0] for coord in pos.values())
-	min_lat = min(coord[1] for coord in pos.values())
-	max_lat = max(coord[1] for coord in pos.values())
+	# Convert lat/lon to Web Mercator
+	transformer = pyproj.Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
 
-	initial_width = max_lon - min_lon
-	initial_height = max_lat - min_lat
+	mercator_positions = {
+		node: transformer.transform(pos[node][0], pos[node][1])
+		for node in pos
+	}
+
+	# Calculate initial bounds in mercator coords
+	min_x = min(coord[0] for coord in mercator_positions.values())
+	max_x = max(coord[0] for coord in mercator_positions.values())
+	min_y = min(coord[1] for coord in mercator_positions.values())
+	max_y = max(coord[1] for coord in mercator_positions.values())
+
+	initial_width = max_x - min_x
+	initial_height = max_y - min_y
 	initial_ratio = initial_width / initial_height
 
 	# Create a ColumnDataSource for nodes
 	node_data = dict(
 		index=list(G.nodes),
-		x=[pos[node][0] for node in G.nodes],
-		y=[pos[node][1] for node in G.nodes],
+		x=[mercator_positions[node][0] for node in G.nodes],
+		y=[mercator_positions[node][1] for node in G.nodes],
 		label=[labels[node] for node in G.nodes],
 	)
 
@@ -131,13 +142,18 @@ def visualize_graph(G):
 			("Stop name", "@label"),
 		],
 		sizing_mode="stretch_both",
-		x_range=(min_lon, max_lon),
-		y_range=(min_lat, max_lat),
+		x_axis_type="mercator",
+		y_axis_type="mercator",
+		x_range=(min_x, max_x),
+		y_range=(min_y, max_y),
 	)
 
-	graph_renderer = from_networkx(G, pos, scale=1)
+	# Add tile layer
+	plot.add_tile(xyz.CartoDB.Positron)
+
+	graph_renderer = from_networkx(G, mercator_positions, scale=1)
 	graph_renderer.node_renderer.data_source = source_nodes
-	graph_renderer.node_renderer.glyph = Circle(radius=0.000058)
+	graph_renderer.node_renderer.glyph = Circle(radius=10)
 	graph_renderer.edge_renderer.data_source = source_edges
 
 	plot.renderers.append(graph_renderer)

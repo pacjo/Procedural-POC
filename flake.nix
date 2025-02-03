@@ -59,6 +59,10 @@
                 networkx
                 # matplotlib
                 bokeh
+
+                # maps and projections
+                pyproj
+                xyzservices
               ]);
 
             shellHook = "python -m ipykernel install --user";
