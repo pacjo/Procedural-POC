@@ -11,15 +11,18 @@ from ztm_data.api import get_api_key, get_stop_data, get_routes_data
 from ztm_data.stop import ZTMStop
 
 def create_stop_lookup(stops_data) -> dict[tuple[int, int], ZTMStop]:
-    """Creates a dictionary to look up ZTMStop objects by their combined 'zespol' and 'slupek' IDs."""
+	"""Creates a dictionary to look up ZTMStop objects by their combined 'zespol' and 'slupek' IDs."""
 
-    stop_lookup = {}
-    for stop_data in stops_data["result"]:
-      stop = ZTMStop.create_from_json(stop_data["values"])
-      stop_id = (stop.zespol, stop.slupek)
-      stop_lookup[stop_id] = stop
+	stop_lookup = {}
+	for stop_data in stops_data["result"]:
+		stop = ZTMStop.create_from_json(stop_data["values"])
 
-    return stop_lookup
+		# Filter out some "internal" stops
+		if stop.slupek != "00" and int(stop.slupek) < 50:
+			stop_id = (stop.zespol, stop.slupek)
+			stop_lookup[stop_id] = stop
+
+	return stop_lookup
 
 def create_graph(stops_data, routes_data):
 	"""Creates a graph from stops and routes data."""
