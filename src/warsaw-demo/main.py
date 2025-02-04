@@ -39,15 +39,16 @@ def create_graph(stops_data, routes_data):
 					G.add_node(
 						str(stop_id),	  # Convert to string for bokeh
 						pos=(stop.dlug_geo, stop.szer_geo),
-						label=stop.nazwa_zespolu
+						label=f"{stop.nazwa_zespolu} {stop.slupek}"
 					)
+
 					if previous_stop_id:
 						G.add_edge(
 							str(previous_stop_id),		  # Convert to string for bokeh
 							str(stop_id),				  # Convert to string for bokeh
 							line=line
 						)
-						previous_stop_id = stop_id
+					previous_stop_id = stop_id
 				else:
 					print(f"Warning: Stop with id: {stop_id} not found in stop_lookup")
 
@@ -58,7 +59,7 @@ def prepare_visualization_data(G):
 
 	pos = nx.get_node_attributes(G, 'pos')
 	labels = nx.get_node_attributes(G, 'label')
-	edge_labels = nx.get_edge_attributes(G,'line')
+	edge_labels = nx.get_edge_attributes(G, 'line')
 
 	# Convert lat/lon to Web Mercator
 	transformer = pyproj.Transformer.from_crs("epsg:4326", "epsg:3857", always_xy=True)
@@ -78,25 +79,33 @@ def prepare_visualization_data(G):
 	initial_height = max_y - min_y
 	initial_ratio = initial_width / initial_height
 
+	# Prepare data for nodes
+	node_xs = [mercator_positions[node][0] for node in G.nodes()]
+	node_ys = [mercator_positions[node][1] for node in G.nodes()]
+	node_labels = [labels[node] for node in G.nodes()]
+
 	# Create a ColumnDataSource for nodes
-	node_data = dict(
-		index=list(G.nodes),
-		x=[mercator_positions[node][0] for node in G.nodes],
-		y=[mercator_positions[node][1] for node in G.nodes],
-		label=[labels[node] for node in G.nodes],
-	)
+	node_data = ColumnDataSource(dict(
+		x=node_xs,
+		y=node_ys,
+		label=node_labels
+	))
+
+	# Prepare data for edges
+	edge_xs = []
+	edge_ys = []
+	for start, end in G.edges():
+		edge_xs.append([mercator_positions[start][0], mercator_positions[end][0]])
+		edge_ys.append([mercator_positions[start][1], mercator_positions[end][1]])
 
 	# Create a ColumnDataSource for edges
-	edge_data = dict(
-		start=[G.nodes[edge[0]] for edge in G.edges],
-		end=[G.nodes[edge[1]] for edge in G.edges],
+	edge_data = ColumnDataSource(dict(
+		xs=edge_xs,
+		ys=edge_ys,
 		line=[edge_labels[edge] for edge in G.edges]
-	)
+	))
 
-	source_nodes = ColumnDataSource(node_data)
-	source_edges = ColumnDataSource(edge_data)
-
-	return source_nodes, source_edges, mercator_positions, min_x, max_x, min_y, max_y, initial_ratio
+	return node_data, edge_data, min_x, max_x, min_y, max_y, initial_ratio
 
 
 def create_bokeh_plot(min_x, max_x, min_y, max_y):
@@ -122,15 +131,38 @@ def create_tile_map(plot):
 
 	plot.add_tile(xyz.CartoDB.Positron)
 
-def create_graph_renderer(G, mercator_positions, source_nodes, source_edges):
+def create_graph_renderer(G, mercator_positions, source_nodes):
 	"""Creates a graph renderer for Bokeh plot."""
 
 	graph_renderer = from_networkx(G, mercator_positions, scale=1)
 	graph_renderer.node_renderer.data_source = source_nodes
 	graph_renderer.node_renderer.glyph = Circle(radius=50)
-	graph_renderer.edge_renderer.data_source = source_edges
 
 	return graph_renderer
+
+def draw_edges(plot, edge_data):
+	"""Draws edges on the Bokeh plot using MultiLine glyphs."""
+
+	plot.multi_line(
+		xs='xs',
+		ys='ys',
+		source=edge_data,
+		line_width=1,
+		color='gray',
+		alpha=0.7
+	)
+
+def draw_nodes(plot, node_data):
+    """Draws nodes on the Bokeh plot using Circle glyphs."""
+
+    plot.circle(
+		x='x',
+		y='y',
+		source=node_data,
+		size=10,
+		color='skyblue',
+		alpha=0.8
+    )
 
 def create_zoom_callback(plot, initial_ratio):
 	"""Creates a zoom callback to maintain aspect ratio."""
@@ -172,23 +204,18 @@ def visualize_graph(G):
 	# Output to an HTML file
 	output_file("graph.html")
 
-	source_nodes, source_edges, mercator_positions, min_x, max_x, min_y, max_y, initial_ratio = prepare_visualization_data(G)
-
+	node_data, edge_data, min_x, max_x, min_y, max_y, initial_ratio = prepare_visualization_data(G)
 	plot = create_bokeh_plot(min_x, max_x, min_y, max_y)
 
+	# background
 	create_tile_map(plot)
 
-	graph_renderer = create_graph_renderer(
-		G,
-		mercator_positions,
-		source_nodes,
-		source_edges,
-	)
+	# content
+	draw_edges(plot, edge_data)
+	draw_nodes(plot, node_data)
 
-	plot.renderers.append(graph_renderer)
-
+	# utils
 	create_zoom_callback(plot, initial_ratio)
-
 	enable_wheel_zoom(plot)
 
 	show(plot)
