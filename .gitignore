@@ -11,7 +11,7 @@
 src/warsaw-demo/.env
 
 ## cached api results
-**/**/ztm_cache.json
+**/**/api_cache.json
 
 ## result page
 src/warsaw-demo/graph.html
