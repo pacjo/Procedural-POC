@@ -2,6 +2,8 @@
 
 aka. my slow descent into madness
 
+![long-route](examples/long-route.gif)
+
 
 ## Installation
 
@@ -70,6 +72,13 @@ run the same as [`static`](#static-bundled-html-file), but use `frame_generator.
 
 ```bash
 ffmpeg -framerate 30 -pattern_type glob -i '*.png' -c:v libx264 -pix_fmt yuv420p out.mp4
+```
+
+
+##### and to GIFs
+
+```bash
+ffmpeg -i out.mp4 -loop 0 out.gif
 ```
 
 
