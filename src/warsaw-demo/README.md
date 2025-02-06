@@ -86,3 +86,5 @@ ffmpeg -framerate 30 -pattern_type glob -i '*.png' -c:v libx264 -pix_fmt yuv420p
 - [ ] fix html in the sidebar (fix issues and make controls section more standing out)
 - [x] darw final path only on the last step
 - [ ] hide axis and title in `frame_generator.py`
+- [ ] investigate weights and heuristic (maybe small numbers aren't meaningful enough?)
+- [ ] update and better document ffmpeg commands

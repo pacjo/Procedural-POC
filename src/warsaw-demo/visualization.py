@@ -209,7 +209,7 @@ def reconstruct_path(came_from, start_stop_id, end_stop_id):
 
 	return path
 
-def draw_path(plot, G, path, mercator_positions):
+def draw_path(plot, G, path, mercator_positions, color="red"):
 	"""Highlights a path on the Bokeh plot."""
 
 	if not path:
@@ -224,7 +224,7 @@ def draw_path(plot, G, path, mercator_positions):
 		path_edges_ys.append([mercator_positions[start_node][1], mercator_positions[end_node][1]])
 
 	path_data = ColumnDataSource(dict(xs=path_edges_xs, ys=path_edges_ys))
-	return plot.multi_line(xs='xs', ys='ys', source=path_data, line_width=4, color="red")
+	return plot.multi_line(xs='xs', ys='ys', source=path_data, line_width=4, color=color)
 
 
 def create_legend(plot):
