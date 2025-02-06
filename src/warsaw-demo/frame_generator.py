@@ -1,12 +1,10 @@
 import os
-import threading
 
 from bokeh.io import export_png
 
 from ztm_data.api import get_api_key, get_stop_data, get_routes_data
 from visualization import create_graph, prepare_visualization_data, create_bokeh_plot, create_tile_map, draw_edges, draw_nodes, reconstruct_path, draw_path
 import a_star
-from concurrent.futures.thread import ThreadPoolExecutor
 
 def visualize_graph(G, start_stop_id=None, end_stop_id=None):
 	"""Visualizes the graph with bokeh."""
@@ -31,35 +29,31 @@ def visualize_graph(G, start_stop_id=None, end_stop_id=None):
 	if not os.path.exists(frames_dir):
 		os.makedirs(frames_dir)
 
-	with ThreadPoolExecutor(max_workers = 5) as executor:
-		if algorithm_data_sources:
-			for step_idx, new_node_data in enumerate(algorithm_data_sources):
-				# Update node data
-				node_data.data = new_node_data
+	if algorithm_data_sources:
+		for step_idx, new_node_data in enumerate(algorithm_data_sources):
+			# Update node data
+			node_data.data = new_node_data
 
-				# Draw path
-				draw_path(map, G, reconstruct_path(came_from, start_stop_id, end_stop_id), mercator_positions)
+			# Draw path
+			draw_path(map, G, reconstruct_path(came_from, start_stop_id, end_stop_id), mercator_positions)
 
-				# Save the current frame as an image
-				filename = os.path.join(frames_dir, f"frame_{step_idx:04d}.png")
-				executor.submit(export_frame, map, filename)
-		else:
-			print("Could not compute A* algorihtm.")
+			# Save the current frame as an image
+			filename = os.path.join(frames_dir, f"frame_{step_idx:04d}.png")
+			export_png(
+				obj = map,
+				filename=filename,
+				width=1000,
+				height=1000,
+				timeout=30
+			)
+
+			print(f"Saved frame: {filename}")
+	else:
+		print("Could not compute A* algorihtm.")
 
 	# Draw shortest path on the final graph
 	draw_path(map, G, reconstruct_path(came_from, start_stop_id, end_stop_id), mercator_positions)
 	print("A* done!")
-
-def export_frame(plot, filename):
-	export_png(
-		obj = plot,
-		filename=filename,
-		width=2000,
-		height=2000,
-		timeout=30
-	)
-
-	print(f"Saved frame: {filename}")
 
 if __name__ == '__main__':
 	api_key = get_api_key()
