@@ -132,7 +132,8 @@ def create_bokeh_plot(min_x, max_x, min_y, max_y):
 def create_tile_map(plot):
 	"""Adds a tile map to the Bokeh plot."""
 
-	plot.add_tile(xyz.CartoDB.Positron)
+	# plot.add_tile(xyz.CartoDB.Positron)
+	plot.add_tile(xyz.CartoDB.PositronNoLabels)
 
 def draw_edges(plot, edge_data):
 	"""Draws edges on the Bokeh plot using MultiLine glyphs."""
@@ -248,9 +249,9 @@ def create_description():
 
 			<h3>A demo of A* path finding algorithm on the Warsaw public transport network.</h3>
 
-			<p>Used data can be found here: <a href="https://api.um.warszawa.pl/" /></p>
+			<p>Used data can be found here: <a href="https://api.um.warszawa.pl/">https://api.um.warszawa.pl/</a></p>
 
-			<p>Code for the demo, as well as other examples, can be found here: <a href="https://github.com/pacjo/Procedural-POC" /></p>
+			<p>Code for the demo, as well as other examples, can be found here: <a href="https://github.com/pacjo/Procedural-POC">https://github.com/pacjo/Procedural-POC</a></p>
 		"""
 	)
 
