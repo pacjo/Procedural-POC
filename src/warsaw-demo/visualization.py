@@ -4,7 +4,7 @@ import pyproj
 
 import xyzservices.providers as xyz
 
-from bokeh.models import ColumnDataSource, CustomJS, WheelZoomTool
+from bokeh.models import ColumnDataSource, CustomJS, WheelZoomTool, Legend, LegendItem, Div
 from bokeh.plotting import figure
 
 from ztm_data.stop import ZTMStop
@@ -192,13 +192,27 @@ def enable_wheel_zoom(plot):
 
 	plot.toolbar.active_scroll = plot.select_one(WheelZoomTool)
 
-def draw_shortest_path(plot, G, start_stop_id, end_stop_id, mercator_positions):
-	"""Draws the shortest path on the Bokeh plot."""
+def reconstruct_path(came_from, start_stop_id, end_stop_id):
+	"""Reconstructs the path from the came_from dictionary."""
 
-	try:
-		path = nx.shortest_path(G, source=start_stop_id, target=end_stop_id, weight=None)
-	except nx.NetworkXNoPath:
-		print(f"No path found between {start_stop_id} and {end_stop_id}")
+	current = end_stop_id
+	path = [current]
+	while current != start_stop_id:
+		if current not in came_from:
+			print("No path found")
+			return []
+
+		current = came_from[current]
+		path.append(current)
+
+	path.reverse()
+
+	return path
+
+def draw_path(plot, G, path, mercator_positions):
+	"""Highlights a path on the Bokeh plot."""
+
+	if not path:
 		return
 
 	path_edges_xs = []
@@ -210,4 +224,34 @@ def draw_shortest_path(plot, G, start_stop_id, end_stop_id, mercator_positions):
 		path_edges_ys.append([mercator_positions[start_node][1], mercator_positions[end_node][1]])
 
 	path_data = ColumnDataSource(dict(xs=path_edges_xs, ys=path_edges_ys))
-	plot.multi_line(xs='xs', ys='ys', source=path_data, line_width=4, color="red")
+	return plot.multi_line(xs='xs', ys='ys', source=path_data, line_width=4, color="red")
+
+
+def create_legend(plot):
+	"""Creates a legend for the Bokeh plot."""
+
+	# Create legend
+	legend_items = [
+		LegendItem(label="Current", renderers=[plot.scatter(x=0, y=0, size=10, color="red")]),
+		LegendItem(label="Open Set", renderers=[plot.scatter(x=0, y=0, size=10, color="green")]),
+		LegendItem(label="Unvisited", renderers=[plot.scatter(x=0, y=0, size=10, color="lightgrey")])
+	]
+
+	legend = Legend(items=legend_items, location="top_right", orientation='horizontal')
+
+	return legend
+
+def create_description():
+	div = Div(
+		text="""
+			<h1>Warsaw-demo</h1>
+
+			<h3>A demo of A* path finding algorithm on the Warsaw public transport network.</h3>
+
+			<p>Used data can be found here: <a href="https://api.um.warszawa.pl/" /></p>
+
+			<p>Code for the demo, as well as other examples, can be found here: <a href="https://github.com/pacjo/Procedural-POC" /></p>
+		"""
+	)
+
+	return div

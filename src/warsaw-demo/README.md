@@ -36,3 +36,5 @@ bokeh serve --show server.py
 - [x] fix aspect ration - make 1:1
 - [ ] improve performance
 - [ ] allow selecting start and stop points
+- [ ] fix html in the sidebar (fix issues and make controls section more standing out)
+- [x] darw final path only on the last step

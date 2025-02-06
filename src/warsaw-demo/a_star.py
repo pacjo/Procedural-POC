@@ -74,4 +74,4 @@ def steps(G, start_stop_id, end_stop_id):
 				if neighbor not in open_set:
 					open_set.add(neighbor)
 
-	return algorithm_steps
+	return algorithm_steps, came_from
