@@ -41,6 +41,15 @@
                 python311Packages.pyqt5
 
                 (python311.pkgs.matplotlib.override { enableQt = true; })
+
+                # for selenium
+                #google-chrome
+                chromedriver
+                geckodriver
+                firefox-bin
+
+                # for generating video from frames
+                ffmpeg-full
               ]
               ++ (with pkgs.python311Packages; [
                 pip
@@ -59,6 +68,7 @@
                 networkx
                 # matplotlib
                 bokeh
+                selenium # bokeh dependency for export
 
                 # maps and projections
                 pyproj
