@@ -36,12 +36,19 @@ def visualize_graph(G, start_stop_id=None, end_stop_id=None):
 			# Update node data
 			node_data.data = new_node_data
 
+			# Frame skipping block. In case of a bug, uncomment and change the if statement to the number of the last successful frame (minus about 10 to work around fading)
+			# if (step_idx < 1390):
+			# 	print(f"Skipping frame {step_idx}")
+			# 	continue
+
 			for path_renderer in path_renderers:
 				try:
+					path_renderers.remove(path_renderer)
 					map.renderers.remove(path_renderer)
 				except:
 					pass
 
+			# fade out the paths
 			for path_data in algorithm_steps[step_idx]['all_paths']:
 				path = path_data['path']
 				frame_number = path_data['frame_number']
@@ -53,13 +60,16 @@ def visualize_graph(G, start_stop_id=None, end_stop_id=None):
 
 			# Save the current frame as an image
 			filename = os.path.join(frames_dir, f"frame_{step_idx:04d}.png")
-			export_png(
-				obj = map,
-				filename=filename,
-				width=2000,
-				height=2000,
-				timeout=30
-			)
+			try:
+				export_png(
+					obj = map,
+					filename=filename,
+					width=2000,
+					height=2000,
+					timeout=10
+				)
+			except Exception as e:
+				print(f"Error saving frame {step_idx} (caused by {e}), skipping")
 
 			print(f"Saved frame: {filename}")
 	else:

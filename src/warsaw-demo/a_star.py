@@ -21,9 +21,17 @@ def data(G, algorithm_steps, mercator_positions):
 			age = step['step_idx'] - frame_number  # Calculate age of visit
 			# Adjust the fade speed as needed. Higher fade_speed is faster
 			fade_speed = 0.1
-			alpha = max(0, 1 - age * fade_speed)  # Calculate alpha value
-			# Convert to RGBA color with alpha
-			node_colors[node] = f"rgba(255, 0, 0, {alpha})" # Red fading out
+			# Calculate interpolation factor (0 to 1)
+			interpolation_factor = min(1, age * fade_speed)
+
+			# Interpolate between red (#ff0000) and lightgray (#d3d3d3)
+			# colors from: https://docs.bokeh.org/en/latest/docs/reference/colors.html
+			red_r = int(0xff * (1 - interpolation_factor) + 0xd3 * interpolation_factor)
+			red_g = int(0x00 * (1 - interpolation_factor) + 0xd3 * interpolation_factor)
+			red_b = int(0x00 * (1 - interpolation_factor) + 0xd3 * interpolation_factor)
+
+			# Convert to hex color
+			node_colors[node] = f'#{red_r:02x}{red_g:02x}{red_b:02x}'
 
 		# Color Current Node (override fade if necessary)
 		if step['current']: # step['current'] can be None in rare cases, when the destination is unreachable

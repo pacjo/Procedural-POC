@@ -154,7 +154,7 @@ def draw_nodes(plot, node_data):
 		x='x',
 		y='y',
 		source=node_data,
-		size=10,
+		size=5,
 		color='color',
 		alpha=0.8
 	)
