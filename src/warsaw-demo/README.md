@@ -59,23 +59,33 @@ bokeh serve --show server.py
 
 ### headless for video creation
 
-
 run the same as [`static`](#static-bundled-html-file), but use `frame_generator.py` instead of `static.py`. Resulting files will be saved in the `frames` directory and you can convert them into video later.
+
+For more information on rendering see [workflow for long "renders"](#workflow-for-long-renders) section.
 
 
 #### Converting resulting files into movies with ffmpeg
 
 > For information on why does the command below work, see [this](https://stackoverflow.com/questions/24961127/how-to-create-a-video-from-images-with-ffmpeg).
 
-1. navigate to the `frames` directory
-2. run ffmpeg:
+
+##### Realtime speed (most correct)
 
 ```bash
-ffmpeg -framerate 30 -pattern_type glob -i '*.png' -c:v libx264 -pix_fmt yuv420p out.mp4
+ffmpeg -framerate 30 -pattern_type glob -i 'frames/*.png' -c:v libx264 -pix_fmt yuv420p out.mp4
 ```
 
 
-##### and to GIFs
+##### Speed up with time
+
+With increasing number of nodes, the algorith will take longer to change meaningfully. We can speed up the video to make up for that.
+
+```bash
+ffmpeg -framerate 30 -pattern_type glob -i 'frames/*.png' -vf "setpts=0.5*PTS" -c:v libx264 -pix_fmt yuv420p out-speed.mp4
+```
+
+
+##### Conversion to GIFs
 
 ```bash
 ffmpeg -i out.mp4 -loop 0 out.gif
@@ -87,6 +97,17 @@ ffmpeg -i out.mp4 -loop 0 out.gif
 - **nr zespołu** to numer kolekcji przystanków
 
 
+### Workflow for long renders
+
+Doing long routes, due to bad code optimization and rather interesting method of doing screenshots by bokeh, requires significant amount of time. Script is singlethreaded, so this has to be worked around manually.
+
+One option is to run multiple instances of `frame_generator.py` in parallel. You can select starting frame using the `Frame skipping block` found in the script.
+
+Beware that not only is the script slow, it's also very memory intensive. Running 2-3 instances in parallel on a 16GB RAM machine is about the limit (you can try more if the path isn't that long).
+
+With recent commits, script will no longer crash if there's an error during image capture, but image that caused the error, will be skipped. Make sure to check the logs and resulting files for missing images.
+
+
 ## TODO
 
 - [x] fix aspect ration - make 1:1
@@ -96,4 +117,4 @@ ffmpeg -i out.mp4 -loop 0 out.gif
 - [x] darw final path only on the last step
 - [ ] hide axis and title in `frame_generator.py`
 - [ ] investigate weights and heuristic (maybe small numbers aren't meaningful enough?)
-- [ ] update and better document ffmpeg commands
+- [x] update and better document ffmpeg commands
